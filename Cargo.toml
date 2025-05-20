@@ -1,0 +1,62 @@
+[package]
+name = "supaterm"
+version = "0.1.0"
+edition = "2021"
+description = "A lightweight intelligent terminal for Linux with AI integration"
+authors = ["SupaTerm Team"]
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Terminal handling
+termwiz = "0.20.0"
+crossterm = "0.27.0"
+tui = { package = "ratatui", version = "0.23.0" }
+portable-pty = "0.8"
+vte = "0.11"
+nix = "0.26"
+
+# Async runtime
+tokio = { version = "1.32.0", features = ["full"] }
+futures = "0.3.28"
+
+# Error handling
+anyhow = "1.0.75"
+
+# Serialization/Deserialization
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.107"
+toml = "0.8"
+
+# HTTP client for API requests
+reqwest = { version = "0.11.20", features = ["json", "stream"] }
+
+# OpenAI API client
+openai-api-rs = "3.0"
+
+# Diff generation
+similar = "2.2.1"
+
+# Logging
+log = "0.4.20"
+env_logger = "0.9"
+
+# File system and utilities
+glob = "0.3"
+tempfile = "3.8"
+dirs = "5.0"
+which = "4.4"
+atty = "0.2"
+
+# Data processing and formatting
+chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.21"
+htmlescape = "0.3"
+uuid = { version = "1.4", features = ["v4"] }
+
+# Command line interface
+clap = { version = "3", features = ["derive"] }
+
+# System interfaces
+libc = "0.2"
