@@ -368,7 +368,7 @@ fn main() -> Result<()> {
     /// Process a template with user inputs
     fn process_template(
         template: &ProjectTemplate,
-        target_dir: &Path,
+        _target_dir: &Path,
         user_inputs: &HashMap<String, String>,
         project_name: &str,
     ) -> Result<Vec<TemplateFile>> {
@@ -459,7 +459,7 @@ fn main() -> Result<()> {
 
     /// Generate a project scaffold from a description
     pub async fn generate_scaffold(&mut self, description: &str) -> Result<(Receiver<AiResponse>, Sender<bool>)> {
-        let (description_str, mut ai_rx) = self.ai_client.generate_scaffold(description).await?;
+        let (_description_str, mut ai_rx) = self.ai_client.generate_scaffold(description).await?;
         
         // Create a channel for confirmation
         let (confirm_tx, mut confirm_rx) = tokio::sync::mpsc::channel(1);
@@ -468,7 +468,7 @@ fn main() -> Result<()> {
         let (progress_tx, progress_rx) = tokio::sync::mpsc::channel(100);
         
         // Clone what we need for the async task
-        let ai_client = self.ai_client.clone();
+        let _ai_client = self.ai_client.clone();
         let current_dir = self.current_dir.clone();
         
         // Process in background
@@ -578,7 +578,7 @@ fn main() -> Result<()> {
         
         // Clone what we need for the async task
         let template_clone = template.clone();
-        let ai_client = self.ai_client.clone();
+        let _ai_client = self.ai_client.clone();
         
         // Process in background
         tokio::spawn(async move {

@@ -10,6 +10,7 @@ use clap::{Parser, Subcommand};
 use log::{debug, error, info, warn};
 use std::env;
 use std::path::PathBuf;
+use std::io::{self, Write};
 
 /// SupaTerm - A lightweight intelligent terminal for Linux
 #[derive(Parser, Debug)]
@@ -20,7 +21,8 @@ struct Args {
     shell: Option<String>,
     
     /// OpenAI API key (default: from environment)
-    #[clap(long, envvar = "OPENAI_API_KEY")]
+    ///#[clap(long, env = "OPENAI_API_KEY")]
+    openai_api_key: String,
     api_key: Option<String>,
     
     /// Log level
@@ -155,7 +157,7 @@ async fn main() -> Result<()> {
                     error!("Failed to initialize fallback AI client: {}", e);
                     error!("Cannot continue without AI client");
                     // Clean up and exit
-                    terminal::cleanup()?;
+                    terminal::cleanup();
                     return Err(anyhow::anyhow!("Failed to initialize AI client"));
                 }
             }
@@ -163,7 +165,7 @@ async fn main() -> Result<()> {
     };
     
     // Initialize scaffolder
-    let scaffolder = match scaffold::Scaffolder::new(ai_client.clone()) {
+    let _scaffolder = match scaffold::Scaffolder::new(ai_client.clone()) {
         Ok(s) => {
             info!("Project scaffolder initialized");
             s
@@ -177,7 +179,7 @@ async fn main() -> Result<()> {
     // Check for subcommands
     if let Some(cmd) = args.command {
         match cmd {
-            Commands::New { name, description } => {
+            Commands::New { name, description: _ } => {
                 info!("Creating new project: {}", name);
                 // TODO: Implement new project scaffolding without TUI
                 println!("Project creation from command line not yet implemented");
@@ -201,8 +203,9 @@ async fn main() -> Result<()> {
             error!("Failed to initialize application: {}", e);
             
             // Attempt to clean up resources
-            terminal::cleanup()
-                .unwrap_or_else(|ce| error!("Failed to clean up terminal resources: {}", ce));
+            if let Err(ce) = terminal::cleanup() {
+                error!("Failed to clean up terminal resources: {}", ce);
+            }
                 
             return Err(e);
         }
@@ -214,8 +217,34 @@ async fn main() -> Result<()> {
     // ===== Application Shutdown Phase =====
     // Always attempt to clean up terminal resources
     info!("Cleaning up terminal resources...");
-    if let Err(e) = terminal::cleanup() {
-        error!("Failed to clean up terminal resources: {}", e);
+    
+    // Use multiple cleanup methods to ensure the terminal is restored
+    // First try the main cleanup
+    match terminal::cleanup() {
+        Err(e) => {
+            error!("Primary terminal cleanup failed: {}", e);
+            info!("Attempting alternative cleanup methods...");
+            
+            // Try crossterm directly
+            let _ = crossterm::terminal::disable_raw_mode();
+            let _ = crossterm::execute!(
+                std::io::stdout(),
+                crossterm::terminal::LeaveAlternateScreen,
+                crossterm::cursor::Show,
+                crossterm::style::ResetColor
+            );
+            
+            // Try direct ANSI sequences
+            let reset_sequence = "\x1b[0m\x1b[?25h\x1b[2J\x1b[H\x1bc";
+            let _ = std::io::stdout().write_all(reset_sequence.as_bytes());
+            let _ = std::io::stdout().flush();
+            
+            // As a last resort, suggest user runs 'reset' command
+            eprintln!("\nIf terminal display is corrupted, run the 'reset' command");
+        }
+        Ok(_) => {
+            debug!("Terminal cleanup completed successfully");
+        }
     }
     
     // Handle result after cleanup
