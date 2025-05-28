@@ -637,7 +637,9 @@ impl SessionManager {
                         
                         let output = TerminalOutput {
                             content: event.content.clone(),
-                            is_control,
+                            is_control: false,
+                            csi_params: Some(Vec::new()),
+                            csi_action: None,
                         };
                         
                         // Send to the terminal output channel
@@ -646,8 +648,10 @@ impl SessionManager {
                     SessionEventType::Input => {
                         // For inputs, we just send a terminal output for display
                         let output = TerminalOutput {
-                            content: format!("Input: {}", event.content),
+                            content: format!("{}", event.content),
                             is_control: false,
+                            csi_params: Some(Vec::new()),
+                            csi_action: None,
                         };
                         
                         let _ = output_tx.send(output).await;
@@ -659,8 +663,10 @@ impl SessionManager {
                                                     .unwrap_or(&default_timestamp);
                         
                         let output = TerminalOutput {
-                            content: format!("[{}] $ {}", timestamp, event.content),
+                            content: format!("{}", event.content),
                             is_control: false,
+                            csi_params: Some(Vec::new()),
+                            csi_action: None,
                         };
                         
                         let _ = output_tx.send(output).await;
@@ -1014,7 +1020,7 @@ impl SessionManager {
         
         // Encrypt if needed
         let final_content = if options.encrypt {
-            if let Some(password) = &options.password {
+            if let Some(_password) = &options.password {
                 // This is a simplified encryption using base64 encoding
                 // In a real implementation, use proper encryption
                 let encoded = base64::encode(&content);

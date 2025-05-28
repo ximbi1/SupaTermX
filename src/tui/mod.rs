@@ -1,4 +1,5 @@
 use anyhow::Result;
+use console::strip_ansi_codes;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers},
     execute,
@@ -28,7 +29,9 @@ pub enum InputMode {
     Ai,
     /// Scaffolding mode - input is used for project scaffolding
     Scaffold,
-}
+    }
+
+
 
 /// Draw the AI chat overlay
 /// Dibuja el overlay de AI usando solo el estado clonado (ai_state), nunca &mut self
@@ -142,6 +145,7 @@ pub struct App {
 }
 
 impl App {
+
     /// Create a new application instance
     pub fn new(terminal_config: TerminalConfig) -> Result<Self> {
         // Setup terminal
@@ -210,20 +214,22 @@ impl App {
 
     /// Process terminal output from the PTY
     async fn process_terminal_output(&mut self) {
-        // Drain the channel
         while let Ok(output) = self.terminal_rx.try_recv() {
-            // In a real implementation, this would properly handle terminal escape sequences
-            // For now, we'll just split on newlines and add to our buffer
-            let lines = output.content.split('\n').map(|s| s.to_string());
-            self.terminal_buffer.extend(lines);
-
-            // Keep buffer at a reasonable size
+            // 1) Quitamos todos los códigos ANSI de color/cursores/etc
+            let cleaned = strip_ansi_codes(&output.content);
+    
+            // 2) Ahora sí, dividimos por líneas "reales" y las metemos en el buffer
+            for line in cleaned.lines() {
+                self.terminal_buffer.push(line.to_string());
+            }
+    
+            // 3) Mantenemos el tamaño máximo
             while self.terminal_buffer.len() > 1000 {
                 self.terminal_buffer.remove(0);
             }
         }
     }
-
+    
     /// Handle input events
     async fn handle_events(&mut self) -> Result<()> {
         if let Event::Key(key) = event::read()? {
@@ -238,6 +244,17 @@ impl App {
 
     /// Handle input in normal mode
     async fn handle_normal_mode_input(&mut self, key: KeyEvent) -> Result<()> {
+                // 1) detecta Ctrl–D antes que nada
+        if key.code == KeyCode::Char('d')
+            && key.modifiers.contains(KeyModifiers::CONTROL)
+        {
+                 // Envíalo al PTY como EOT
+            self.terminal_tx.send("\u{4}".to_string()).await?;
+                 // Opcionalmente, sal de la aplicación si quieres
+            self.should_quit = true;
+            return Ok(());
+        }
+        // Handle different key events in normal mode     
         match key {
             // Quit
             KeyEvent {
@@ -252,8 +269,7 @@ impl App {
 
             // Enter AI mode
             KeyEvent {
-                code: KeyCode::Char('i'),
-                modifiers: KeyModifiers::CONTROL,
+                code: KeyCode::Tab,
                 ..
             } => {
                 self.input_mode = InputMode::Ai;
@@ -423,15 +439,16 @@ impl App {
     /// Draw the user interface
     /// Draw the user interface
     fn draw(&mut self) -> Result<()> {
-        // 1) Extract and clone everything we need before any borrows
+        // 1) Extraer y clonar todo lo que necesitamos antes de cualquier borrow
         let terminal_output = self.render_terminal_output();
-        let input_mode = self.input_mode;
-        let cursor_pos = self.cursor_position;
-        let input_buffer = self.input_buffer.clone();
-        let ai_state = self.ai_chat.clone();
+        let input_mode       = self.input_mode;
+        let cursor_pos       = self.cursor_position;
+        let input_buffer     = self.input_buffer.clone();
+        let ai_state         = self.ai_chat.clone();
 
-        // 2) Now do the mutable borrow for the terminal draw
-        self.terminal.draw(|f| {
+        // 2) Aislar el borrow mutable solo al campo `terminal`
+        let terminal = &mut self.terminal;
+        terminal.draw(|f| {
             let size = f.size();
 
             // Layout principal
@@ -444,12 +461,12 @@ impl App {
                 ])
                 .split(size);
 
-            // 3) Use only the cloned data in the closure
+            // 3) Usar únicamente los datos clonados
             f.render_widget(terminal_output, chunks[0]);
 
             let status = match input_mode {
-                InputMode::Normal => "NORMAL",
-                InputMode::Ai => "AI",
+                InputMode::Normal   => "NORMAL",
+                InputMode::Ai       => "AI",
                 InputMode::Scaffold => "SCAFFOLD",
             };
             let status_line = Paragraph::new(format!("Mode: {}", status))
@@ -460,17 +477,17 @@ impl App {
                 .borders(Borders::ALL)
                 .title(Span::styled("Input", Style::default().fg(Color::Yellow)));
 
-            // Use the cloned input buffer
             let input_text = match input_mode {
-                InputMode::Normal => &input_buffer,
-                InputMode::Ai | InputMode::Scaffold => &ai_state.input,
+                InputMode::Normal   => &input_buffer,
+                InputMode::Ai
+                | InputMode::Scaffold => &ai_state.input,
             };
             let input_widget = Paragraph::new(input_text.as_str())
                 .block(input_block)
                 .style(Style::default().fg(Color::White));
             f.render_widget(input_widget, chunks[2]);
 
-            // Use cursor_pos directly since it's copied
+            // Cursor
             let x0 = chunks[2].x + 1;
             let y0 = chunks[2].y + 1;
             if input_mode == InputMode::Normal {
@@ -479,35 +496,32 @@ impl App {
                 f.set_cursor(x0 + input_text.len() as u16, y0);
             }
 
-            // Draw AI overlay if visible
+            // Overlay AI si toca
             if ai_state.visible {
                 draw_ai_overlay(&ai_state, f, size);
             }
+
+
         })?;
 
         Ok(())
     }
-    
 
-    /// Render the terminal output area
-    fn render_terminal_output(&self) -> Paragraph {
-        // Combine terminal buffer into text
-        let text: Vec<Line> = self
+
+    /// Render the terminal output area como Paragraph<'static>
+    fn render_terminal_output(&self) -> Paragraph<'static> {
+        // Clonamos cada línea para tener datos 'static
+        let lines: Vec<Line> = self
             .terminal_buffer
             .iter()
-            .map(|line| {
-                Line::from(vec![Span::raw(line)])
-            })
+            .map(|line| Line::from(vec![Span::raw(line.clone())]))
             .collect();
 
-        Paragraph::new(text)
+        Paragraph::new(lines)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(Span::styled(
-                        "Terminal",
-                        Style::default().fg(Color::Green),
-                    )),
+                    .title(Span::styled("Terminal", Style::default().fg(Color::Green))),
             )
             .wrap(Wrap { trim: false })
     }
@@ -583,4 +597,5 @@ impl App {
         // For now, we'll return a placeholder
         Ok(format!("Executed command: {}", command))
     }
+
 }
