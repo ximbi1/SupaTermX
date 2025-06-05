@@ -10,7 +10,6 @@ use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::ai::{AiClient, AiResponse, ResponseType};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 /// Template source type
 #[derive(Debug, Clone, PartialEq, Eq)]

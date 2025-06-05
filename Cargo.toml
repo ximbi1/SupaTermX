@@ -57,7 +57,7 @@ htmlescape = "0.3"
 uuid = { version = "1.4", features = ["v4"] }
 
 # Command line interface
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 
 # System interfaces
 libc = "0.2"

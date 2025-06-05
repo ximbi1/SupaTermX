@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use portable_pty::{
     native_pty_system, CommandBuilder, PtyPair, PtySize,
     Child as PtyChild,
@@ -13,8 +13,8 @@ use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::task::JoinHandle;
 use vte::{Parser, Perform, Params};
 use std::path::PathBuf;
-use nix::sys::signal;
-use downcast_rs::Downcast;
+// use nix::sys::signal; // Currently unused
+// use downcast_rs::Downcast; // Currently unused
 
 
 /// Configuration for the terminal
