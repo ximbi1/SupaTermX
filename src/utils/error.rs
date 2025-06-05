@@ -1,7 +1,4 @@
-use std::fmt::{self, Display, Formatter};
-use std::io;
-use std::result;
-use super::*;
+use std::fmt;
 
 /// Error kind enumeration
 #[derive(Debug, Clone, PartialEq, Eq)]
