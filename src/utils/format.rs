@@ -1,5 +1,4 @@
-use std::io::{self, Write};
-use crossterm::style::{Color, SetForegroundColor};
+use crossterm::style::Color;
 
 /// Text style for TUI rendering
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

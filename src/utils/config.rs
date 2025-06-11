@@ -3,9 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use super::*;
 
 /// Get the configuration directory
 pub fn get_config_dir() -> Result<PathBuf> {

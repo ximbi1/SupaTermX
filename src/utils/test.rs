@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::fs::create_dir_all;
 use std::process::{Output, ExitStatus};

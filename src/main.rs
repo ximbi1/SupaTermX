@@ -10,7 +10,7 @@ use clap::{Parser, Subcommand};
 use log::{debug, error, info, warn};
 use std::env;
 use std::path::PathBuf;
-use std::io::{self, Write};
+use std::io::Write;
 
 /// SupaTerm - A lightweight intelligent terminal for Linux
 #[derive(Parser, Debug)]
@@ -20,9 +20,8 @@ struct Args {
     #[clap(short, long)]
     shell: Option<String>,
     
-    /// OpenAI API key (default: from environment)
-    ///#[clap(long, env = "OPENAI_API_KEY")]
-    openai_api_key: String,
+    /// OpenAI API key (optional, can also be provided via OPENAI_API_KEY env)
+    #[clap(long, env = "OPENAI_API_KEY")]
     api_key: Option<String>,
     
     /// Log level
@@ -157,7 +156,7 @@ async fn main() -> Result<()> {
                     error!("Failed to initialize fallback AI client: {}", e);
                     error!("Cannot continue without AI client");
                     // Clean up and exit
-                    terminal::cleanup();
+                    let _ = terminal::cleanup();
                     return Err(anyhow::anyhow!("Failed to initialize AI client"));
                 }
             }

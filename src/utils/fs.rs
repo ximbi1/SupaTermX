@@ -1,5 +1,5 @@
-use std::fs::{self, create_dir_all, copy, metadata, File};
-use std::io::{self, Read, Write};
+use std::fs::{create_dir_all, copy, metadata, File};
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 

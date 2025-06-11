@@ -15,7 +15,6 @@ use serde_json::Value;
 use std::env;
 use std::time::Duration;
 use tokio::sync::mpsc::{self, Receiver, Sender};
-use futures::StreamExt;
 
 /// Maximum number of retries for API calls
 const MAX_RETRIES: usize = 3;
@@ -161,14 +160,17 @@ impl AiClient {
     pub fn new(config: Config) -> Result<Self> {
         let api_key = config.api_key.clone();
         if api_key.is_empty() {
-            return Err(anyhow::anyhow!("OpenAI API key not found. Please set the OPENAI_API_KEY environment variable."));
+            warn!(
+                "OpenAI API key not found. AI features will be disabled."
+            );
         }
 
-        // Create client with authentication
+        // Create client with authentication even if the key is empty so the
+        // rest of the application can run without AI features.
         let client = if let Some(org_id) = &config.organization_id {
-            Arc::new(Client::new_with_organization(api_key, org_id.clone()))
+            Arc::new(Client::new_with_organization(api_key.clone(), org_id.clone()))
         } else {
-            Arc::new(Client::new(api_key))
+            Arc::new(Client::new(api_key.clone()))
         };
         Ok(Self { client, config })
     }
